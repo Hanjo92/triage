@@ -228,22 +228,26 @@ def main():
         logging.warning("⚠️ 환경변수에 BOT_TOKEN이 등록되지 않았습니다.")
         
     app = ApplicationBuilder().token(TOKEN).build()
-    
-    try:
-        import pytz
-        seoul_timezone = pytz.timezone('Asia/Seoul')
-        morning_time = datetime.time(hour=8, minute=0, tzinfo=seoul_timezone)
-        app.job_queue.run_daily(send_morning_reminder, time=morning_time)
-        print(f"🕒 자동 스케줄러 등록 완료: 매일 {morning_time} 마다 아침 리마인더 발송 예정")
-    except ImportError:
-        logging.warning("⚠️ pytz 라이브러리가 없어 타임존 없이 UTC 기준으로 동작합니다.")
-        app.job_queue.run_daily(send_morning_reminder, time=datetime.time(hour=23, minute=0))
+
+    # 한국시간(UTC+9) 오전 8시를 기준 시간으로 설정
+    if app.job_queue:
+        try:
+            import pytz
+            seoul_timezone = pytz.timezone('Asia/Seoul')
+            morning_time = datetime.time(hour=8, minute=0, tzinfo=seoul_timezone)
+            app.job_queue.run_daily(send_morning_reminder, time=morning_time)
+            print(f"🕒 자동 스케줄러 등록 완료: 매일 {morning_time} 마다 아침 리마인더 발송 예정")
+        except ImportError:
+            logging.warning("⚠️ pytz 라이브러리가 없어 타임존 없이 UTC 기준으로 동작합니다.")
+            app.job_queue.run_daily(send_morning_reminder, time=datetime.time(hour=23, minute=0))
+    else:
+        logging.error("❌ python-telegram-bot[job-queue] 패키지가 없어 스케줄러를 비활성화합니다.")
         
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("push", trigger_reminder_now))
     app.add_handler(CallbackQueryHandler(button))
-    # 텍스트나 다른 명령어를 칠 경우 친절하게 안내하는 방어 핸들러 추가
-    app.add_handler(MessageHandler(filters.TEXT | filters.COMMAND, handle_unknown_message))
+    # 텍스트를 칠 경우 친절하게 안내하는 텍스트 핸들러
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_unknown_message))
     
     print("🤖 [트리아지] 텔레그램 봇 모듈 동작 준비 완료! (Ctrl+C를 눌러 종료)")
     # 실 배포/테스트 준비 완료
