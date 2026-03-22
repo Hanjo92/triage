@@ -247,7 +247,7 @@ def main():
     
     print("🤖 [트리아지] 텔레그램 봇 모듈 동작 준비 완료! (Ctrl+C를 눌러 종료)")
     # 실 배포/테스트 준비 완료
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
