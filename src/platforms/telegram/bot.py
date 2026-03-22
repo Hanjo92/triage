@@ -237,9 +237,13 @@ def main():
         try:
             import pytz
             seoul_timezone = pytz.timezone('Asia/Seoul')
-            morning_time = datetime.time(hour=8, minute=0, tzinfo=seoul_timezone)
+            
+            rem_hour = int(os.getenv("REMINDER_HOUR", "8"))
+            rem_minute = int(os.getenv("REMINDER_MINUTE", "0"))
+            morning_time = datetime.time(hour=rem_hour, minute=rem_minute, tzinfo=seoul_timezone)
+            
             app.job_queue.run_daily(send_morning_reminder, time=morning_time)
-            print(f"🕒 자동 스케줄러 등록 완료: 매일 {morning_time} 마다 아침 리마인더 발송 예정")
+            print(f"🕒 자동 스케줄러 등록 완료: 매일 {morning_time} 마다 리마인더 발송 예정")
         except ImportError:
             logging.warning("⚠️ pytz 라이브러리가 없어 타임존 없이 UTC 기준으로 동작합니다.")
             app.job_queue.run_daily(send_morning_reminder, time=datetime.time(hour=23, minute=0))
