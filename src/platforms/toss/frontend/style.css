@@ -1,0 +1,212 @@
+:root {
+  --toss-blue: #3182F6;
+  --toss-blue-active: #1B64DA;
+  --bg-color: #F2F4F6;
+  --card-bg: #FFFFFF;
+  --text-primary: #191F28;
+  --text-secondary: #8B95A1;
+  --border-radius: 16px;
+  --toss-shadow: 0px 8px 24px rgba(25, 31, 40, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mobile Wrapper */
+#app-wrapper {
+  background-color: var(--card-bg);
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--toss-shadow);
+  overflow: hidden;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 12px;
+  background: var(--card-bg);
+  z-index: 10;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.badge {
+  background-color: #E8F3FF;
+  color: var(--toss-blue);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.hidden { display: none !important; }
+
+/* Main Container */
+.app-container {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* View transitions */
+.view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Typography elements */
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 32px;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+.subtitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* Options / Buttons */
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+  margin-bottom: 20px;
+}
+
+.btn {
+  background-color: #F9FAFB;
+  border: 1px solid #E5E8EB;
+  border-radius: var(--border-radius);
+  padding: 18px 20px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn:hover, .btn:active {
+  background-color: #F2F4F6;
+  transform: scale(0.98);
+}
+
+.btn.primary {
+  background-color: var(--toss-blue);
+  color: white;
+  border: none;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(49, 130, 246, 0.2);
+}
+
+.btn.primary:hover, .btn.primary:active {
+  background-color: var(--toss-blue-active);
+}
+
+.btn.secondary {
+  background-color: #F2F4F6;
+  color: var(--text-secondary);
+  justify-content: center;
+  border: none;
+}
+
+.action-card {
+  background-color: #FFFFFF;
+  border: 2px solid #F2F4F6;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--toss-shadow);
+}
+.action-card:hover {
+  border-color: var(--toss-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(49, 130, 246, 0.1);
+}
+.action-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.action-card-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Loader */
+.loader-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #E5E8EB;
+  border-top: 4px solid var(--toss-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+
+# 로컬 DB 및 환경설정 파일은 실수로 올라가지 않도록 방지
+triage.db
+*.sqlite3
+.env
+
+# 에디터
+.vscode/
+.idea/
