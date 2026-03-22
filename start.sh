@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Railway 서버용 통합 실행 스크립트
-echo "Starting Telegram Bot..."
+echo "Checking and seeding initial Database..."
+# DB가 비어있으면 초기 행동 데이터 16개를 자동으로 주입합니다.
+python scripts/seed_actions.py
+
+echo "Starting Telegram Bot in background..."
 python src/platforms/telegram/bot.py &
 
 echo "Starting FastAPI Server..."
