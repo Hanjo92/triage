@@ -2,7 +2,7 @@ import sys
 import os
 import logging
 import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # 프로젝트 최상단 폴더의 모듈들을 인식하도록 경로 지정
@@ -298,7 +298,16 @@ def main():
     if TOKEN == "YOUR_BOT_TOKEN_HERE" or not TOKEN:
         logging.warning("⚠️ 환경변수에 BOT_TOKEN이 등록되지 않았습니다.")
         
-    app = ApplicationBuilder().token(TOKEN).build()
+    async def post_init(application):
+        commands = [
+            BotCommand("start", "트리아지 시작 및 미니앱 열기"),
+            BotCommand("alarm", "알림 시간 지정 추가 (예: /alarm 08:30)"),
+            BotCommand("alarms", "현재 등록된 내 알림 목록 확인"),
+            BotCommand("clear_alarms", "모든 커스텀 알림 초기화")
+        ]
+        await application.bot.set_my_commands(commands)
+        
+    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
     # 한국시간(UTC+9) 오전 8시를 기준 시간으로 설정
     if app.job_queue:
