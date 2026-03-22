@@ -63,3 +63,13 @@ class Completion(Base):
 
     user = relationship("User", back_populates="completions")
     action = relationship("Action")
+
+class UserReminder(Base):
+    __tablename__ = "user_reminders"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    time_str = Column(String, nullable=False) # e.g. "08:00"
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")

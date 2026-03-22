@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from src.db.session import SessionLocal
-from src.db.models import User, DailyCheckin, Completion, Action
+from src.db.models import User, DailyCheckin, Completion, Action, UserReminder
 from src.core.recommendation import recommend_actions
 from src.core.streak import get_missed_days, get_completion_score
 
@@ -51,38 +51,106 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("굿모닝! 트리아지에 오신 걸 환영합니다.\n오늘 아침 상태는 어때요?", reply_markup=reply_markup)
 
 # ==========================================
-# ⏰ 스케줄러 기능 (자동 푸시 알림)
+# ⏰ 커스텀 개인화 알람 기능 (매 분마다 검사)
 # ==========================================
-async def send_morning_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """모든 가입 유저에게 아침 체크인 알림을 일괄 전송합니다."""
-    logging.info("아침 체크인 알림 일괄 발송 시작...")
+async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
+    """모든 가입 유저의 커스텀 알람 시간과 현재 시간을 대조하여 발송"""
+    import pytz
+    from datetime import datetime
+    try:
+        seoul = pytz.timezone('Asia/Seoul')
+    except ImportError:
+        return
+        
+    now = datetime.now(seoul)
+    current_time_str = f"{now.hour:02d}:{now.minute:02d}"
+    
     db = SessionLocal()
     try:
-        # 텔레그램 ID가 등록된 활성 유저 모두 조회
         users = db.query(User).filter(User.telegram_id.isnot(None)).all()
         for user in users:
-            keyboard = [
-                [InlineKeyboardButton("🙂 가벼운 편", callback_data="energy_high")],
-                [InlineKeyboardButton("😐 그냥 보통", callback_data="energy_mid")],
-                [InlineKeyboardButton("😵 완전 방전", callback_data="energy_low")],
-                [InlineKeyboardButton("🛑 오늘은 패스", callback_data="energy_skip")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            try:
-                await context.bot.send_message(
-                    chat_id=user.telegram_id,
-                    text="🌅 굿모닝! 새로운 하루가 시작되었어요. 오늘 아침을 어떻게 시작해볼까요?",
-                    reply_markup=reply_markup
-                )
-            except Exception as e:
-                logging.error(f"유저 {user.telegram_id} 에게 알림 발송 실패: {e}")
+            reminders = db.query(UserReminder).filter(UserReminder.user_id == user.id).all()
+            user_times = [r.time_str for r in reminders] if reminders else ["08:00"]
+            
+            if current_time_str in user_times:
+                keyboard = [
+                    [InlineKeyboardButton("🙂 가벼운 편", callback_data="energy_high")],
+                    [InlineKeyboardButton("😐 그냥 보통", callback_data="energy_mid")],
+                    [InlineKeyboardButton("😵 완전 방전", callback_data="energy_low")],
+                    [InlineKeyboardButton("🛑 오늘은 패스", callback_data="energy_skip")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                try:
+                    await context.bot.send_message(
+                        chat_id=user.telegram_id,
+                        text="🌅 새로운 루틴을 시작할 시간입니다! 마음의 준비 상태는 어떠신가요?",
+                        reply_markup=reply_markup
+                    )
+                except Exception as e:
+                    logging.error(f"유저 {user.telegram_id} 에게 알림 발송 실패: {e}")
     finally:
         db.close()
 
 async def trigger_reminder_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/push 커맨드 - 테스트용으로 전체 유저에게 즉시 알림 발송"""
-    await update.message.reply_text("수동으로 아침 알람을 전체 발송합니다...")
-    await send_morning_reminder(context)
+    """/push 커맨드 - 테스트용 즉시 알림 발송"""
+    await update.message.reply_text("수동 알림을 전체 발송합니다...")
+    db = SessionLocal()
+    try:
+        users = db.query(User).filter(User.telegram_id.isnot(None)).all()
+        for user in users:
+            keyboard = [
+                [InlineKeyboardButton("🙂 가벼운 편", callback_data="energy_high")],
+                [InlineKeyboardButton("😐 그냥 보통", callback_data="energy_mid")]
+            ]
+            msg = await context.bot.send_message(chat_id=user.telegram_id, text="수동 PUSH 테스트입니다.", reply_markup=InlineKeyboardMarkup(keyboard))
+    finally:
+        db.close()
+
+async def add_alarm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/alarm HH:MM 명령어로 새 알람 추가"""
+    if not context.args:
+        await update.message.reply_text("📝 사용법: `/alarm 08:30` (24시간제 시간과 분을 띄어쓰기 없이 적어주세요)", parse_mode="Markdown")
+        return
+    time_str = context.args[0]
+    if len(time_str) != 5 or ":" not in time_str:
+        await update.message.reply_text("❌ 시간 형식이 잘못되었습니다. 08:30, 14:00 와 같이 콜론(:)을 넣어주세요.")
+        return
+        
+    db = SessionLocal()
+    try:
+        user = await get_or_create_user(db, str(update.effective_user.id))
+        exists = db.query(UserReminder).filter(UserReminder.user_id == user.id, UserReminder.time_str == time_str).first()
+        if not exists:
+            db.add(UserReminder(user_id=user.id, time_str=time_str))
+            db.commit()
+        await update.message.reply_text(f"✅ 매일 **{time_str}**에 추가로 봇이 말을 걸어드릴게요! (기존 기본 알람 08:00은 대체됩니다)", parse_mode="Markdown")
+    finally:
+        db.close()
+
+async def list_alarms(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = SessionLocal()
+    try:
+        user = await get_or_create_user(db, str(update.effective_user.id))
+        rems = db.query(UserReminder).filter(UserReminder.user_id == user.id).all()
+        if not rems:
+            await update.message.reply_text("🔔 등록된 맞춤 알람이 없습니다. (기본으로 매일 아침 08:00에 발송됩니다)\n\n알람 추가 명령어:\n`/alarm 09:30`")
+        else:
+            times = ", ".join(sorted([r.time_str for r in rems]))
+            await update.message.reply_text(f"🔔 현재 등록된 나의 개인 알람 시간들:\n**{times}**\n\n알람 추가: `/alarm HH:MM`\n모두 초기화: `/clear_alarms`", parse_mode="Markdown")
+    finally:
+        db.close()
+
+async def clear_alarms(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    db = SessionLocal()
+    try:
+        user = await get_or_create_user(db, str(update.effective_user.id))
+        rems = db.query(UserReminder).filter(UserReminder.user_id == user.id).all()
+        for r in rems:
+            db.delete(r)
+        db.commit()
+        await update.message.reply_text("♻️ 내가 만든 수동 알람들을 전부 지웠습니다! 이제 다시 기본(아침 08:00) 1개만 발송됩니다.")
+    finally:
+        db.close()
 # ==========================================
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -236,22 +304,18 @@ def main():
     if app.job_queue:
         try:
             import pytz
-            seoul_timezone = pytz.timezone('Asia/Seoul')
-            
-            rem_hour = int(os.getenv("REMINDER_HOUR", "8"))
-            rem_minute = int(os.getenv("REMINDER_MINUTE", "0"))
-            morning_time = datetime.time(hour=rem_hour, minute=rem_minute, tzinfo=seoul_timezone)
-            
-            app.job_queue.run_daily(send_morning_reminder, time=morning_time)
-            print(f"🕒 자동 스케줄러 등록 완료: 매일 {morning_time} 마다 리마인더 발송 예정")
+            app.job_queue.run_repeating(check_reminders, interval=60)
+            print(f"🕒 개인별 맞춤 알람 스케줄러 등록 완료 (매 분 검사)")
         except ImportError:
-            logging.warning("⚠️ pytz 라이브러리가 없어 타임존 없이 UTC 기준으로 동작합니다.")
-            app.job_queue.run_daily(send_morning_reminder, time=datetime.time(hour=23, minute=0))
+            logging.warning("⚠️ 서드파티 스케줄러를 위해 pytz가 필요합니다.")
     else:
         logging.error("❌ python-telegram-bot[job-queue] 패키지가 없어 스케줄러를 비활성화합니다.")
         
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("push", trigger_reminder_now))
+    app.add_handler(CommandHandler("alarm", add_alarm))
+    app.add_handler(CommandHandler("alarms", list_alarms))
+    app.add_handler(CommandHandler("clear_alarms", clear_alarms))
     app.add_handler(CallbackQueryHandler(button))
     # 텍스트를 칠 경우 친절하게 안내하는 텍스트 핸들러
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_unknown_message))
