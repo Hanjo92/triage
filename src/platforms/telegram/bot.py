@@ -240,8 +240,8 @@ def main():
     app.add_handler(CallbackQueryHandler(button))
     
     print("🤖 [트리아지] 텔레그램 봇 모듈 동작 준비 완료! (Ctrl+C를 눌러 종료)")
-    # 실 배포/테스트 시 아래 주석 해제
-    # app.run_polling()
+    # 실 배포/테스트 준비 완료
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
