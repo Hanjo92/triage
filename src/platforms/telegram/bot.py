@@ -37,8 +37,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         db.close()
         
+    webapp_url = os.getenv("WEBAPP_URL", "https://YOUR_WEBAPP_URL_HERE.up.railway.app")
     keyboard = [
-        [InlineKeyboardButton("🚀 트리아지 미니앱 켜기", web_app=WebAppInfo(url="https://YOUR_HTTPS_URL_HERE.ngrok.io"))],
+        [InlineKeyboardButton("🚀 트리아지 미니앱 켜기", web_app=WebAppInfo(url=webapp_url))],
         [InlineKeyboardButton("🙂 에너지 좋음", callback_data="energy_high")],
         [InlineKeyboardButton("😐 그냥 보통", callback_data="energy_mid")],
         [InlineKeyboardButton("😵 완전 방전됨", callback_data="energy_low")]
